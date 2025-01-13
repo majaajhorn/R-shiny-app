@@ -63,51 +63,54 @@ ui <- fluidPage(
       div(class = "box-shadow",
           h4("Osnovne postavke", class = "category-header"),
           numericInput("total_budget", 
-                       "Ukupna mjesečna primanja (€):",
+                       "Koliko iznose Vaša ukupna mjesečna primanja (plaća i ostali izvori)? (€)",
+                       value = 0, min = 0),
+          numericInput("additional_income",
+                       "Imate li dodatni izvor zarade (npr. iznajmljivanje nekretnine)? Ako ne, unesite 0. (€)",
                        value = 0, min = 0),
           numericInput("savings_target",
-                       "Željena mjesečna ušteda (€):",
+                       "Koliki iznos mjesečno želite uštedjeti? (€)",
                        value = 0, min = 0)
       ),
       
       div(class = "box-shadow",
           h4("Stanovanje", class = "category-header"),
           numericInput("housing_min",
-                       "Minimalni troškovi (€):",
+                       "Koliko najmanje iznose Vaši mjesečni troškovi za stanovanje (najam i režije)? (€)",
                        value = 0, min = 0),
           numericInput("housing_max",
-                       "Maksimalni troškovi (€):",
+                       "Koliko najviše iznose Vaši mjesečni troškovi za stanovanje (najam i režije)? (€)",
                        value = 0, min = 0)
       ),
       
       div(class = "box-shadow",
           h4("Hrana", class = "category-header"),
           numericInput("food_min",
-                       "Minimalni troškovi (€):",
+                       "Koliko najmanje mjesečno trošite na hranu? (€)",
                        value = 0, min = 0),
           numericInput("food_max",
-                       "Maksimalni troškovi (€):",
+                       "Koliko najviše mjesečno trošite na hranu? (€)",
                        value = 0, min = 0)
       ),
       
       div(class = "box-shadow",
           h4("Prijevoz", class = "category-header"),
           numericInput("transport_min",
-                       "Minimalni troškovi (€):",
+                       "Koliko najmanje mjesečno trošite na prijevoz? (€)",
                        value = 0, min = 0),
           numericInput("transport_max",
-                       "Maksimalni troškovi (€):",
+                       "Koliko najviše mjesečno trošite na prijevoz? (€)",
                        value = 0, min = 0)
       ),
       
       div(class = "box-shadow",
           h4("Luksuz/zabava", class = "category-header"),
           numericInput("luxury_min",
-                       "Minimalni troškovi (€):",
+                       "Koliko najmanje mjesečno trošite na luksuz i zabavu? (€)",
                        value = 0, min = 0),
           numericInput("luxury_max",
-                       "Maksimalni troškovi (€):",
-                       value = 300, min = 0)
+                       "Koliko najviše mjesečno trošite na luksuz i zabavu? (€)",
+                       value = 0, min = 0)
       ),
       
       actionButton("optimize", "Optimiziraj budžet", 
@@ -143,9 +146,9 @@ server <- function(input, output) {
     # Postavljanje problema linearnog programiranja
     
     # Koeficijenti funkcije cilja (minimiziramo ukupne troškove)
-    obj <- c(1, 1, 1, 1)  # Koeficijenti za stanovanje, hranu, prijevoz, luksuz
+    obj <- c(1, 1, 1, 1)
     
-    # Matrica ograničenja
+    # Matrica ograničenja ostaje ista
     const.mat <- matrix(c(
       1, 1, 1, 1,    # Ukupni budžet
       1, 0, 0, 0,    # Min stanovanje
@@ -158,9 +161,11 @@ server <- function(input, output) {
       0, 0, 0, 1     # Max luksuz
     ), nrow = 9, byrow = TRUE)
     
-    # Desna strana ograničenja
+    # Ažurirana desna strana ograničenja s dodatnim izvorom zarade
+    total_income <- input$total_budget + input$additional_income
+    
     rhs <- c(
-      input$total_budget - input$savings_target,  # Ukupni budžet minus ušteda
+      total_income - input$savings_target,  # Ukupni budžet (primanja + dodatni izvor) minus ušteda
       input$housing_min,    # Min stanovanje
       input$housing_max,    # Max stanovanje
       input$food_min,       # Min hrana
@@ -171,7 +176,7 @@ server <- function(input, output) {
       input$luxury_max      # Max luksuz
     )
     
-    # Znakovi ograničenja
+    # Znakovi ograničenja ostaju isti
     const.dir <- c("<=", ">=", "<=", ">=", "<=", ">=", "<=", ">=", "<=")
     
     # Rješavanje problema
@@ -187,10 +192,14 @@ server <- function(input, output) {
     result <- optimizeBudget()
     
     if (result$status == 0) {
+      total_income <- input$total_budget + input$additional_income
       total_spent <- sum(result$solution)
-      savings <- input$total_budget - total_spent
+      savings <- total_income - total_spent
       
       cat("Optimalna raspodjela troškova:\n\n")
+      cat(sprintf("💰 Ukupna primanja: %.2f €\n", input$total_budget))
+      cat(sprintf("💵 Dodatni izvor zarade: %.2f €\n", input$additional_income))
+      cat(sprintf("📊 Ukupno raspoloživo: %.2f €\n\n", total_income))
       cat(sprintf("📍 Stanovanje: %.2f €\n", result$solution[1]))
       cat(sprintf("🍽️ Hrana: %.2f €\n", result$solution[2]))
       cat(sprintf("🚌 Prijevoz: %.2f €\n", result$solution[3]))
@@ -198,7 +207,7 @@ server <- function(input, output) {
       cat("\n--------------------------------\n")
       cat(sprintf("💰 Ukupni troškovi: %.2f €\n", total_spent))
       cat(sprintf("💵 Mjesečna ušteda: %.2f €\n", savings))
-      cat(sprintf("📊 Postotak uštede: %.1f%%\n", (savings/input$total_budget)*100))
+      cat(sprintf("📊 Postotak uštede: %.1f%%\n", (savings/total_income)*100))
     } else {
       cat("❌ Nije moguće pronaći optimalno rješenje s zadanim ograničenjima.\n")
       cat("⚠️ Molimo prilagodite parametre.")
