@@ -148,7 +148,7 @@ server <- function(input, output) {
     # Koeficijenti funkcije cilja (minimiziramo ukupne troškove)
     obj <- c(1, 1, 1, 1)
     
-    # Matrica ograničenja ostaje ista
+    # Matrica ograničenja 
     const.mat <- matrix(c(
       1, 1, 1, 1,    # Ukupni budžet
       1, 0, 0, 0,    # Min stanovanje
@@ -176,7 +176,7 @@ server <- function(input, output) {
       input$luxury_max      # Max luksuz
     )
     
-    # Znakovi ograničenja ostaju isti
+    # Znakovi ograničenja 
     const.dir <- c("<=", ">=", "<=", ">=", "<=", ">=", "<=", ">=", "<=")
     
     # Rješavanje problema
